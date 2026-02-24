@@ -1,9 +1,10 @@
 package com.hcl.linklite.entity;
 
 import jakarta.persistence.*;
+
 import lombok.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+//import jakarta.validation.constraints.NotBlank;
+//import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import org.hibernate.Hibernate;
 import java.time.LocalDateTime;
