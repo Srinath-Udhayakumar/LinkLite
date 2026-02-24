@@ -10,6 +10,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class UrlAnalyticsService {
@@ -24,7 +25,7 @@ public class UrlAnalyticsService {
     }
 
     // TOTAL ANALYTICS
-    public UrlAnalyticsResponseDto getTotalAnalytics(String shortCode) {
+    public AnalyticsResponse getTotalAnalytics(String shortCode) {
 
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() ->
@@ -33,11 +34,22 @@ public class UrlAnalyticsService {
         long totalClicks =
                 urlClickRepository.countByUrl_ShortCode(shortCode);
 
-        return new UrlAnalyticsResponseDto(
-                shortCode,
-                totalClicks,
-                url.getCreatedAt()
-        );
+        List<UrlClick> recentClicks = urlClickRepository.findRecentClicksByUrl(url);
+
+        List<AnalyticsResponse.ClickData> clickDataList = recentClicks.stream()
+                .map(click -> AnalyticsResponse.ClickData.builder()
+                        .clickedAt(click.getClickedAt())
+                        .ipAddress(click.getIpAddress())
+                        .build())
+                .toList();
+
+        return AnalyticsResponse.builder()
+                .shortCode(shortCode)
+                .longUrl(url.getLongUrl())
+                .totalClicks(totalClicks)
+                .createdAt(url.getCreatedAt())
+                .recentClicks(clickDataList)
+                .build();
     }
 
     // LAST 24 HOURS ANALYTICS

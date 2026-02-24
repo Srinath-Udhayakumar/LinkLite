@@ -26,7 +26,7 @@ public class UrlService {
     private final UrlClickRepository urlClickRepository;
     private final ShortCodeService shortCodeService;
     
-    @Value("${linklite.short-code.base-url:http://localhost:8080}")
+    @Value("${linklite.short-code.base-url:http://localhost:8081}")
     private String baseUrl;
     
     @Transactional

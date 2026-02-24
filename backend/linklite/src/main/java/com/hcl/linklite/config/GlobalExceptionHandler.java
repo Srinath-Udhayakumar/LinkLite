@@ -1,5 +1,6 @@
 package com.hcl.linklite.config;
 
+import com.hcl.linklite.exception.ResourceNotFoundException;
 import com.hcl.linklite.exception.ShortCodeGenerationException;
 import com.hcl.linklite.exception.UrlNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,22 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+            ResourceNotFoundException ex, WebRequest request) {
+        
+        log.warn("Resource not found: {}", ex.getMessage());
+        
+        Map<String, Object> response = createErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "RESOURCE_NOT_FOUND",
+                ex.getMessage(),
+                request.getDescription(false)
+        );
+        
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
     
     @ExceptionHandler(UrlNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUrlNotFoundException(
@@ -68,6 +85,22 @@ public class GlobalExceptionHandler {
                 request.getDescription(false)
         );
         response.put("validationErrors", validationErrors);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+    
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(
+            org.springframework.http.converter.HttpMessageNotReadableException ex, WebRequest request) {
+        
+        log.warn("Request body is missing or malformed: {}", ex.getMessage());
+        
+        Map<String, Object> response = createErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_FAILED",
+                "Request body is required and must be valid JSON",
+                request.getDescription(false)
+        );
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }

@@ -1,41 +1,42 @@
 package com.hcl.linklite.controller;
 
-
-
 import com.hcl.linklite.dto.*;
 import com.hcl.linklite.service.UrlAnalyticsService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/v1/urls")
+@RequestMapping("/urls")
+@RequiredArgsConstructor
 public class UrlAnalyticsController {
 
     private final UrlAnalyticsService analyticsService;
 
-    public UrlAnalyticsController(UrlAnalyticsService analyticsService) {
-        this.analyticsService = analyticsService;
-    }
-
-    // TOTAL CLICKS
     @GetMapping("/{shortCode}/analytics")
-    public Object getAnalytics(@PathVariable String shortCode,
-                               @RequestParam(required = false) String range) {
-
+    public ResponseEntity<?> getAnalytics(@PathVariable String shortCode,
+                                          @RequestParam(required = false) String range) {
+        
+        log.info("Analytics request for short code: {}, range: {}", shortCode, range);
+        
         if ("24h".equalsIgnoreCase(range)) {
-            return analyticsService.getLast24HoursClicks(shortCode);
+            return ResponseEntity.ok(analyticsService.getLast24HoursClicks(shortCode));
         }
 
-        return analyticsService.getTotalAnalytics(shortCode);
+        return ResponseEntity.ok(analyticsService.getTotalAnalytics(shortCode));
     }
 
-    // CLICK HISTORY
     @GetMapping("/{shortCode}/analytics/history")
-    public Page<ClickHistoryDto> getClickHistory(
+    public ResponseEntity<Page<ClickHistoryDto>> getClickHistory(
             @PathVariable String shortCode,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-
-        return analyticsService.getClickHistory(shortCode, page, size);
+        
+        log.info("Click history request for short code: {}, page: {}, size: {}", shortCode, page, size);
+        
+        return ResponseEntity.ok(analyticsService.getClickHistory(shortCode, page, size));
     }
 }
