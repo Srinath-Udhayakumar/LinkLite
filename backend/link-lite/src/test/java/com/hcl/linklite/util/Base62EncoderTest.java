@@ -186,13 +186,16 @@ class Base62EncoderTest {
     @Test
     void testPrivateConstructor() {
         // Test that utility class cannot be instantiated
-        Exception exception = assertThrows(UnsupportedOperationException.class, () -> {
+        Exception exception = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> {
             // Use reflection to test private constructor
             var constructor = Base62Encoder.class.getDeclaredConstructor();
             constructor.setAccessible(true);
             constructor.newInstance();
         });
         
-        assertTrue(exception.getMessage().contains("Utility class cannot be instantiated"));
+        // Check that the cause is UnsupportedOperationException
+        assertNotNull(exception.getCause());
+        assertInstanceOf(UnsupportedOperationException.class, exception.getCause());
+        assertTrue(exception.getCause().getMessage().contains("Utility class cannot be instantiated"));
     }
 }

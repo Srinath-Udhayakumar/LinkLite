@@ -1,5 +1,7 @@
 package com.hcl.linklite.util;
 
+import java.math.BigInteger;
+
 /**
  * Utility class for encoding and decoding numbers using Base62 encoding.
  * Base62 uses characters: 0-9, a-z, A-Z (total 62 characters)
@@ -33,12 +35,16 @@ public final class Base62Encoder {
             return String.valueOf(BASE62_CHARS.charAt(0));
         }
         
+        // Use BigInteger to avoid overflow with large numbers
+        BigInteger bigNumber = BigInteger.valueOf(number);
+        BigInteger base = BigInteger.valueOf(BASE);
         StringBuilder encoded = new StringBuilder();
         
-        while (number > 0) {
-            int remainder = (int) (number % BASE);
+        while (bigNumber.compareTo(BigInteger.ZERO) > 0) {
+            BigInteger[] quotientAndRemainder = bigNumber.divideAndRemainder(base);
+            int remainder = quotientAndRemainder[1].intValue();
             encoded.append(BASE62_CHARS.charAt(remainder));
-            number /= BASE;
+            bigNumber = quotientAndRemainder[0];
         }
         
         return encoded.reverse().toString();
@@ -49,17 +55,17 @@ public final class Base62Encoder {
      * 
      * @param encoded the Base62 encoded string
      * @return decoded long number
-     * @throws IllegalArgumentException if encoded string is null, empty, or contains invalid characters
+     * @throws IllegalArgumentException if encoded string is null, empty, contains invalid characters, or results in overflow
      */
     public static long decode(String encoded) {
         if (encoded == null || encoded.isEmpty()) {
             throw new IllegalArgumentException("Encoded string cannot be null or empty");
         }
         
-        long decoded = 0;
-        int power = 1;
+        BigInteger decoded = BigInteger.ZERO;
+        BigInteger base = BigInteger.valueOf(BASE);
         
-        for (int i = encoded.length() - 1; i >= 0; i--) {
+        for (int i = 0; i < encoded.length(); i++) {
             char c = encoded.charAt(i);
             int digit = BASE62_CHARS.indexOf(c);
             
@@ -67,11 +73,15 @@ public final class Base62Encoder {
                 throw new IllegalArgumentException("Invalid character in encoded string: " + c);
             }
             
-            decoded += digit * power;
-            power *= BASE;
+            decoded = decoded.multiply(base).add(BigInteger.valueOf(digit));
         }
         
-        return decoded;
+        // Check if the result fits in a long
+        if (decoded.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+            throw new IllegalArgumentException("Decoded number exceeds maximum long value");
+        }
+        
+        return decoded.longValue();
     }
     
     /**
