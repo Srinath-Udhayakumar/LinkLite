@@ -1,42 +1,35 @@
 -- LinkLite URL Shortener Database Schema
--- PostgreSQL Schema Initialization Script
+-- PostgreSQL Schema Initialization Script - STRICT REQUIREMENTS COMPLIANCE
 
--- Create URL table
-CREATE TABLE IF NOT EXISTS url (
+-- Drop all existing tables to ensure clean state
+DROP TABLE IF EXISTS url_clicks CASCADE;
+DROP TABLE IF EXISTS url_click CASCADE;
+DROP TABLE IF EXISTS urls CASCADE;
+DROP TABLE IF EXISTS url CASCADE;
+
+-- Create URLs table as per Requirement 8.1
+CREATE TABLE urls (
     id BIGSERIAL PRIMARY KEY,
-    short_code VARCHAR(10) NOT NULL UNIQUE,
     long_url TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
+    short_code VARCHAR(10) UNIQUE NOT NULL,
+    total_clicks BIGINT DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create URL_CLICK table for analytics
-CREATE TABLE IF NOT EXISTS url_click (
+-- Create URL_Clicks table as per Requirement 8.2
+CREATE TABLE url_clicks (
     id BIGSERIAL PRIMARY KEY,
     url_id BIGINT NOT NULL,
-    short_code VARCHAR(10) NOT NULL,
-    ip_address VARCHAR(45),
-    user_agent TEXT,
-    referer VARCHAR(500),
-    country VARCHAR(2),
-    city VARCHAR(100),
     clicked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_url_click_url FOREIGN KEY (url_id) REFERENCES url(id) ON DELETE CASCADE
+    ip_address VARCHAR(45),
+    CONSTRAINT fk_url_clicks_urls FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
 );
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_url_short_code ON url(short_code);
-CREATE INDEX IF NOT EXISTS idx_url_created_at ON url(created_at);
-CREATE INDEX IF NOT EXISTS idx_url_click_short_code ON url_click(short_code);
-CREATE INDEX IF NOT EXISTS idx_url_click_clicked_at ON url_click(clicked_at);
-CREATE INDEX IF NOT EXISTS idx_url_click_url_id ON url_click(url_id);
+-- Create indexes for performance as per requirements
+CREATE INDEX idx_urls_short_code ON urls(short_code);
+CREATE INDEX idx_urls_created_at ON urls(created_at);
+CREATE INDEX idx_url_clicks_url_id ON url_clicks(url_id);
+CREATE INDEX idx_url_clicks_clicked_at ON url_clicks(clicked_at);
 
 -- Create sequence for short code generation if needed
 CREATE SEQUENCE IF NOT EXISTS short_code_seq START 1;
-
--- Insert sample data for testing (optional)
--- INSERT INTO url (short_code, long_url) VALUES 
---     ('TEST123', 'https://www.google.com'),
---     ('TEST456', 'https://www.github.com')
--- ON CONFLICT (short_code) DO NOTHING;
