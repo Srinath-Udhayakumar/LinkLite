@@ -9,5 +9,4 @@ class LinkliteApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }

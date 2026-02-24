@@ -2,6 +2,10 @@ package com.hcl.linklite.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.Objects;
+import org.hibernate.Hibernate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -30,6 +34,26 @@ public class Url {
     @Builder.Default
     private Long totalClicks = 0L;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Url url = (Url) o;
+        return id != null && Objects.equals(id, url.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
