@@ -2,6 +2,8 @@ package com.hcl.linklite.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.Objects;
+import org.hibernate.Hibernate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,4 +31,24 @@ public class UrlClick {
 
     @Column(name = "ip_address")
     private String ipAddress;
+
+    @PrePersist
+    protected void onCreate() {
+        if (clickedAt == null) {
+            clickedAt = LocalDateTime.now();
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        UrlClick urlClick = (UrlClick) o;
+        return id != null && Objects.equals(id, urlClick.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
