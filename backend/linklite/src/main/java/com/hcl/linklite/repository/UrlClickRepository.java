@@ -15,6 +15,8 @@ public interface UrlClickRepository extends JpaRepository<UrlClick, Long> {
 
     long countByUrlAndClickedAtAfter(Url url, LocalDateTime time);
 
+    List<UrlClick> findByUrlAndClickedAtAfter(Url url, LocalDateTime time);
+
     @Query("SELECT uc FROM UrlClick uc WHERE uc.url = :url ORDER BY uc.clickedAt DESC")
-    List<UrlClick> findRecentClicksByUrl(@Param("url") Url url, @Param("limit") int limit);
+    List<UrlClick> findRecentClicksByUrl(@Param("url") Url url);
 }

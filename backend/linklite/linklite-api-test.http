@@ -1,0 +1,330 @@
+### LinkLite URL Shortener API Testing
+### Base URL: http://localhost:8081
+
+### Variables
+@baseUrl = http://localhost:8081
+@longUrl = https://www.google.com
+@invalidUrl = invalid-url
+@nonExistentShortCode = NOTEXIST
+
+### ===== URL SHORTENING ENDPOINTS =====
+
+### 1. Create Short URL - Valid Request
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "{{longUrl}}"
+}
+
+> {%
+client.test("Short URL creation successful", function() {
+    client.assert(response.status === 201, "Expected status 201");
+    client.assert(response.body.shortCode !== undefined, "Short code should be present");
+    client.assert(response.body.shortUrl !== undefined, "Short URL should be present");
+    client.assert(response.body.longUrl === "{{longUrl}}", "Long URL should match");
+    client.global.set("shortCode", response.body.shortCode);
+    client.global.set("shortUrl", response.body.shortUrl);
+});
+%}
+
+###
+
+### 2. Create Short URL - Invalid URL Format
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "{{invalidUrl}}"
+}
+
+> {%
+client.test("Invalid URL should return 400", function() {
+    client.assert(response.status === 400, "Expected status 400");
+    client.assert(response.body.error === "VALIDATION_FAILED", "Expected validation error");
+});
+%}
+
+###
+
+### 3. Create Short URL - Missing URL
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+}
+
+> {%
+client.test("Missing URL should return 400", function() {
+    client.assert(response.status === 400, "Expected status 400");
+    client.assert(response.body.error === "VALIDATION_FAILED", "Expected validation error");
+});
+%}
+
+###
+
+### 4. Create Short URL - Empty URL
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": ""
+}
+
+> {%
+client.test("Empty URL should return 400", function() {
+    client.assert(response.status === 400, "Expected status 400");
+    client.assert(response.body.error === "VALIDATION_FAILED", "Expected validation error");
+});
+%}
+
+### ===== REDIRECT ENDPOINTS =====
+
+### 5. Redirect to Original URL - Valid Short Code
+GET {{baseUrl}}/{{shortCode}}
+
+> {%
+client.test("Redirect should return 302", function() {
+    client.assert(response.status === 302, "Expected status 302");
+    client.assert(response.headers.location === "{{longUrl}}", "Should redirect to original URL");
+});
+%}
+
+###
+
+### 6. Redirect to Original URL - Non-existent Short Code
+GET {{baseUrl}}/{{nonExistentShortCode}}
+
+> {%
+client.test("Non-existent short code should return 404", function() {
+    client.assert(response.status === 404, "Expected status 404");
+    client.assert(response.body.error === "URL_NOT_FOUND", "Expected URL not found error");
+});
+%}
+
+### ===== ANALYTICS ENDPOINTS =====
+
+### 7. Get Analytics - Valid Short Code
+GET {{baseUrl}}/api/v1/urls/{{shortCode}}/analytics
+
+> {%
+client.test("Analytics should return 200", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.body.shortCode === client.global.get("shortCode"), "Short code should match");
+    client.assert(response.body.longUrl === "{{longUrl}}", "Long URL should match");
+    client.assert(response.body.totalClicks !== undefined, "Total clicks should be present");
+    client.assert(response.body.createdAt !== undefined, "Created date should be present");
+    client.assert(Array.isArray(response.body.recentClicks), "Recent clicks should be an array");
+});
+%}
+
+###
+
+### 8. Get Analytics - 24 Hour Range
+GET {{baseUrl}}/api/v1/urls/{{shortCode}}/analytics?range=24h
+
+> {%
+client.test("24h analytics should return 200", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.body.shortCode === client.global.get("shortCode"), "Short code should match");
+    client.assert(Array.isArray(response.body.recentClicks), "Recent clicks should be an array");
+});
+%}
+
+###
+
+### 9. Get Analytics - Non-existent Short Code
+GET {{baseUrl}}/api/v1/urls/{{nonExistentShortCode}}/analytics
+
+> {%
+client.test("Analytics for non-existent code should return 404", function() {
+    client.assert(response.status === 404, "Expected status 404");
+    client.assert(response.body.error === "URL_NOT_FOUND", "Expected URL not found error");
+});
+%}
+
+### ===== COMPLEX WORKFLOW TESTS =====
+
+### 10. Create Multiple URLs and Test Uniqueness
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "https://www.github.com"
+}
+
+> {%
+client.test("Second URL creation successful", function() {
+    client.assert(response.status === 201, "Expected status 201");
+    client.assert(response.body.shortCode !== client.global.get("shortCode"), "Short codes should be unique");
+    client.global.set("shortCode2", response.body.shortCode);
+});
+%}
+
+###
+
+### 11. Test Multiple Redirects to Increment Clicks
+GET {{baseUrl}}/{{shortCode}}
+
+###
+
+### 12. Test Multiple Redirects to Increment Clicks (Second Request)
+GET {{baseUrl}}/{{shortCode}}
+
+###
+
+### 13. Verify Click Count Increased
+GET {{baseUrl}}/api/v1/urls/{{shortCode}}/analytics
+
+> {%
+client.test("Click count should increase", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.body.totalClicks >= 3, "Should have at least 3 clicks");
+    client.assert(response.body.recentClicks.length >= 2, "Should have recent clicks recorded");
+});
+%}
+
+### ===== ERROR HANDLING TESTS =====
+
+### 14. Test Empty Request Body
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+> {%
+client.test("Empty request should return 400", function() {
+    client.assert(response.status === 400, "Expected status 400");
+});
+%}
+
+###
+
+### 15. Test Invalid JSON
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "https://www.example.com",
+  "invalidField": "test"
+
+> {%
+client.test("Invalid JSON should be handled gracefully", function() {
+    client.assert(response.status >= 400, "Should return error status");
+});
+%}
+
+### ===== PERFORMANCE TESTS =====
+
+### 16. Bulk URL Creation Test
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "https://www.stackoverflow.com"
+}
+
+> {%
+client.test("Bulk URL creation", function() {
+    client.assert(response.status === 201, "Expected status 201");
+    client.global.set("shortCode3", response.body.shortCode);
+});
+%}
+
+###
+
+### 17. Test Analytics Performance
+GET {{baseUrl}}/api/v1/urls/{{shortCode}}/analytics
+
+> {%
+client.test("Analytics response time", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.responseTime < 1000, "Response should be under 1 second");
+});
+%}
+
+### ===== HEALTH CHECK ENDPOINTS =====
+
+### 18. Application Health Check
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("Health check should return 200", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.body.status === "UP", "Application should be UP");
+});
+%}
+
+###
+
+### 19. Application Info
+GET {{baseUrl}}/actuator/info
+
+> {%
+client.test("Info endpoint should return 200", function() {
+    client.assert(response.status === 200, "Expected status 200");
+});
+%}
+
+### ===== EDGE CASE TESTS =====
+
+### 20. Test Very Long URL
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "https://www.example.com/very/long/path/with/many/segments/and/parameters?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5"
+}
+
+> {%
+client.test("Long URL handling", function() {
+    client.assert(response.status === 201, "Expected status 201");
+    client.assert(response.body.shortCode !== undefined, "Should generate short code for long URL");
+});
+%}
+
+###
+
+### 21. Test URL with Special Characters
+POST {{baseUrl}}/api/v1/urls/shorten
+Content-Type: application/json
+
+{
+  "longUrl": "https://www.example.com/path-with-dashes_and_underscores?query=value&another=test"
+}
+
+> {%
+client.test("Special characters in URL", function() {
+    client.assert(response.status === 201, "Expected status 201");
+});
+%}
+
+### ===== CLEANUP TESTS =====
+
+### 22. Final Analytics Check
+GET {{baseUrl}}/api/v1/urls/{{shortCode}}/analytics
+
+> {%
+client.test("Final analytics verification", function() {
+    client.assert(response.status === 200, "Expected status 200");
+    client.assert(response.body.totalClicks >= 3, "Should have accumulated clicks");
+    console.log("Final click count: " + response.body.totalClicks);
+    console.log("Short code: " + response.body.shortCode);
+    console.log("Long URL: " + response.body.longUrl);
+});
+%}
+
+### ===== TEST SUMMARY =====
+
+# This HTTP file provides comprehensive testing for:
+# 1. URL Shortening functionality
+# 2. Redirect functionality  
+# 3. Analytics and reporting
+# 4. Error handling and validation
+# 5. Performance considerations
+# 6. Edge cases and boundary conditions
+# 7. Health check endpoints
+#
+# Usage:
+# 1. Ensure LinkLite application is running on http://localhost:8081
+# 2. Execute requests in order for workflow tests
+# 3. Check response assertions for validation
+# 4. Monitor console output for detailed test results
