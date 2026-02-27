@@ -17,7 +17,7 @@ public class RedirectController {
 
     private final ClickLoggingService clickLoggingService;
 
-    @GetMapping("/{shortCode}")
+    @GetMapping("/{shortCode:^(?!api$|health$|actuator$)[a-zA-Z0-9]+$}")
     public RedirectView redirect(@PathVariable String shortCode, HttpServletRequest request) {
         log.debug("Received redirect request for shortCode: {}", shortCode);
         
