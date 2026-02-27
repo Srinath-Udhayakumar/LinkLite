@@ -3,7 +3,7 @@ import { CreateURLRequest, CreateURLResponse, AnalyticsData, ShortenedURL } from
 
 class APIService {
   private api: AxiosInstance;
-  private baseURL = 'http://localhost:8080/api'; // Update this to your backend URL
+  private baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
   constructor() {
     this.api = axios.create({

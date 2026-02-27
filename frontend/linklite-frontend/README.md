@@ -41,7 +41,7 @@ src/
 
 1. Clone or extract the project:
 ```bash
-cd frontend\ project
+cd frontend/linklite-frontend
 ```
 
 2. Install dependencies:

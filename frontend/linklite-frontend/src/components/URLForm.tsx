@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight, Copy, Check, AlertCircle, Loader } from 'lucide-react';
 import apiService from '../services/apiService';
 import { CreateURLResponse } from '../types';
@@ -12,10 +12,20 @@ export const URLForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
   const isValidURL = (url: string): boolean => {
     try {
-      new URL(url);
-      return true;
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
       return false;
     }
@@ -50,7 +60,8 @@ export const URLForm: React.FC = () => {
       setLongURL('');
 
       // Auto-hide success message after 5 seconds
-      setTimeout(() => setSuccess(false), 5000);
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = setTimeout(() => setSuccess(false), 5000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to shorten URL. Please try again.';
       setError(errorMessage);
@@ -64,7 +75,8 @@ export const URLForm: React.FC = () => {
     if (shortenedURL) {
       navigator.clipboard.writeText(shortenedURL);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     }
   };
 

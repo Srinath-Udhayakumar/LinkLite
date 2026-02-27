@@ -1,5 +1,5 @@
-import React from 'react';
-import { Eye, Calendar, TrendingUp, ExternalLink, Copy, Trash2 } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Eye, Calendar, TrendingUp, ExternalLink, Copy, Check, Trash2 } from 'lucide-react';
 import { ShortenedURL } from '../types';
 
 interface AnalyticsCardProps {
@@ -13,13 +13,21 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   onDelete,
   onViewDetails,
 }) => {
-  const [, setCopied] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const handleCopy = () => {
     const shortenedURL = `${window.location.origin}/s/${url.short_code}`;
     navigator.clipboard.writeText(shortenedURL);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   const formatDate = (dateString: string) => {
@@ -51,7 +59,11 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
                 className="p-1 hover:bg-gray-100 rounded transition-colors"
                 title="Copy short link"
               >
-                <Copy className="w-4 h-4 text-gray-500" />
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Copy className="w-4 h-4 text-gray-500" />
+                )}
               </button>
             </div>
             <p className="text-sm text-gray-600 hover:text-primary-600 cursor-pointer break-all">

@@ -2,6 +2,7 @@ package com.hcl.linklite.service;
 
 import com.hcl.linklite.entity.Url;
 import com.hcl.linklite.entity.UrlClick;
+import com.hcl.linklite.exception.UrlNotFoundException;
 import com.hcl.linklite.repository.UrlClickRepository;
 import com.hcl.linklite.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class ClickLoggingService {
         log.debug("Logging click for shortCode: {}, IP: {}", shortCode, ipAddress);
         
         Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new RuntimeException("URL not found for shortCode: " + shortCode));
+                .orElseThrow(() -> new UrlNotFoundException("URL not found for shortCode: " + shortCode));
 
         UrlClick urlClick = UrlClick.builder()
                 .url(url)
@@ -31,16 +32,15 @@ public class ClickLoggingService {
 
         urlClickRepository.save(urlClick);
 
-        url.setTotalClicks(url.getTotalClicks() + 1);
-        urlRepository.save(url);
+        // Atomically increment total clicks to prevent race conditions under concurrent access
+        urlRepository.incrementTotalClicks(shortCode);
 
-        log.debug("Successfully logged click for shortCode: {}, new total clicks: {}", 
-                shortCode, url.getTotalClicks());
+        log.debug("Successfully logged click for shortCode: {}", shortCode);
     }
 
     public String getLongUrl(String shortCode) {
         return urlRepository.findByShortCode(shortCode)
                 .map(Url::getLongUrl)
-                .orElseThrow(() -> new RuntimeException("URL not found for shortCode: " + shortCode));
+                .orElseThrow(() -> new UrlNotFoundException("URL not found for shortCode: " + shortCode));
     }
 }

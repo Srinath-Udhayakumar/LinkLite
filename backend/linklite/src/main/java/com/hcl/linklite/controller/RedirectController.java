@@ -1,5 +1,6 @@
 package com.hcl.linklite.controller;
 
+import com.hcl.linklite.exception.UrlNotFoundException;
 import com.hcl.linklite.service.ClickLoggingService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,19 +22,12 @@ public class RedirectController {
     public RedirectView redirect(@PathVariable String shortCode, HttpServletRequest request) {
         log.debug("Received redirect request for shortCode: {}", shortCode);
         
-        try {
-            String clientIp = getClientIpAddress(request);
-            clickLoggingService.logClick(shortCode, clientIp);
-            
-            String longUrl = clickLoggingService.getLongUrl(shortCode);
-            log.debug("Redirecting shortCode: {} to {}", shortCode, longUrl);
-            
-            return new RedirectView(longUrl);
-            
-        } catch (RuntimeException e) {
-            log.warn("URL not found for shortCode: {}", shortCode);
-            throw new UrlNotFoundException("Short URL not found: " + shortCode);
-        }
+        String clientIp = getClientIpAddress(request);
+        clickLoggingService.logClick(shortCode, clientIp);
+
+        String longUrl = clickLoggingService.getLongUrl(shortCode);
+        log.debug("Redirecting shortCode: {} to {}", shortCode, longUrl);
+        return new RedirectView(longUrl);
     }
 
     @ExceptionHandler(UrlNotFoundException.class)
@@ -44,20 +38,22 @@ public class RedirectController {
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
+            return anonymizeIp(xForwardedFor.split(",")[0].trim());
         }
 
         String xRealIp = request.getHeader("X-Real-IP");
         if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
-            return xRealIp;
+            return anonymizeIp(xRealIp);
         }
 
-        return request.getRemoteAddr();
+        return anonymizeIp(request.getRemoteAddr());
     }
 
-    public static class UrlNotFoundException extends RuntimeException {
-        public UrlNotFoundException(String message) {
-            super(message);
+    private String anonymizeIp(String ipAddress) {
+        if (ipAddress == null) {
+            return null;
         }
+        // Mask last octet for IPv4 (e.g., 192.168.1.100 -> 192.168.1.0)
+        return ipAddress.replaceAll("(\\d+\\.\\d+\\.\\d+\\.)(\\d+)", "${1}0");
     }
 }

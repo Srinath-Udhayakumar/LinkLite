@@ -4,6 +4,11 @@ import { ArrowLeft, Calendar, Eye, Clock } from 'lucide-react';
 import apiService from '../services/apiService';
 import { AnalyticsData } from '../types';
 
+interface ChartDataPoint {
+  time: string;
+  clicks: number;
+}
+
 interface AnalyticsDetailProps {
   shortCode: string;
   onBack: () => void;
@@ -13,7 +18,7 @@ export const AnalyticsDetail: React.FC<AnalyticsDetailProps> = ({ shortCode, onB
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -32,14 +37,14 @@ export const AnalyticsDetail: React.FC<AnalyticsDetailProps> = ({ shortCode, onB
           });
 
           const sortedData = Object.entries(hourlyData)
+            .sort(([hourA], [hourB]) => new Date(hourA).getTime() - new Date(hourB).getTime())
             .map(([hour, count]) => ({
               time: new Date(hour).toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
               }),
               clicks: count,
-            }))
-            .sort((a, b) => a.time.localeCompare(b.time));
+            }));
 
           setChartData(sortedData);
         }
