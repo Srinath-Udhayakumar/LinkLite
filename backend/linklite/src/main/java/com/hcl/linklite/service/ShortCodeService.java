@@ -1,11 +1,14 @@
 package com.hcl.linklite.service;
 
-import com.hcl.linklite.repository.UrlRepository;
-import com.hcl.linklite.util.shortcode.ShortCodeGenerator;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.hcl.linklite.exception.ShortCodeGenerationException;
+import com.hcl.linklite.repository.UrlRepository;
+import com.hcl.linklite.util.shortcode.ShortCodeGenerator;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -35,6 +38,7 @@ public class ShortCodeService {
         
         String errorMessage = String.format("Failed to generate unique short code after %d attempts", maxRetries);
         log.error(errorMessage);
-        throw new RuntimeException(errorMessage);
+        throw new ShortCodeGenerationException(errorMessage);
     }
 }
+

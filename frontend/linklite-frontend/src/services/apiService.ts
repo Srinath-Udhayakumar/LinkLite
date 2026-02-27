@@ -1,30 +1,62 @@
-import axios, { AxiosInstance } from 'axios';
-import { CreateURLRequest, CreateURLResponse, AnalyticsData, ShortenedURL } from '../types';
+import axios, { AxiosError, AxiosInstance } from 'axios';
+import { AnalyticsData, CreateURLRequest, CreateURLResponse, ShortenedURL } from '../types';
 
 class APIService {
   private api: AxiosInstance;
-  private baseURL = 'http://localhost:8080/api'; // Update this to your backend URL
+  private baseURL: string;
+  private maxRetries = 3;
+  private retryDelay = 1000;
 
   constructor() {
+    // Use environment variable or fallback to localhost
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+    
     this.api = axios.create({
       baseURL: this.baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 10000,
     });
+
+    // Response interceptor for error handling
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError) => {
+        console.error('API Error:', error.message);
+        if (error.response?.status === 404) {
+          throw new Error('URL not found');
+        } else if (error.response?.status === 400) {
+          throw new Error('Invalid request');
+        } else if (error.response?.status === 500) {
+          throw new Error('Server error');
+        }
+        throw error;
+      }
+    );
   }
 
   /**
-   * Shorten a long URL
+   * Shorten a long URL with retry logic
    */
   async shortenURL(request: CreateURLRequest): Promise<CreateURLResponse> {
-    try {
-      const response = await this.api.post<CreateURLResponse>('/urls/shorten', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error shortening URL:', error);
-      throw error;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await this.api.post<CreateURLResponse>('/urls/shorten', request);
+        return response.data;
+      } catch (error) {
+        lastError = error;
+        console.warn(`Attempt ${attempt} failed, retrying...`, error);
+        
+        if (attempt < this.maxRetries) {
+          await this.delay(this.retryDelay * attempt);
+        }
+      }
     }
+    
+    throw lastError || new Error('Failed to shorten URL');
   }
 
   /**
@@ -45,7 +77,7 @@ class APIService {
    */
   async getAnalytics(shortCode: string): Promise<AnalyticsData> {
     try {
-      const response = await this.api.get<AnalyticsData>(`/analytics/${shortCode}`);
+      const response = await this.api.get<AnalyticsData>(`/urls/${shortCode}/analytics`);
       return response.data;
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -67,6 +99,39 @@ class APIService {
   }
 
   /**
+   * Get click history with pagination
+   */
+  async getClickHistory(shortCode: string, page: number = 0, size: number = 10) {
+    try {
+      const response = await this.api.get(
+        `/urls/${shortCode}/analytics/history`,
+        {
+          params: { page, size },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching click history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get last 24 hours analytics
+   */
+  async get24HoursAnalytics(shortCode: string) {
+    try {
+      const response = await this.api.get(`/urls/${shortCode}/analytics`, {
+        params: { range: '24h' },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching 24h analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a shortened URL
    */
   async deleteURL(urlId: number): Promise<void> {
@@ -79,33 +144,42 @@ class APIService {
   }
 
   /**
-   * Get recent clicks for a URL
+   * Export analytics as CSV
    */
-  async getRecentClicks(shortCode: string, limit: number = 10) {
+  async exportClickHistory(shortCode: string): Promise<string> {
     try {
-      const response = await this.api.get(`/analytics/${shortCode}/clicks`, {
-        params: { limit },
-      });
-      return response.data;
+      const history = await this.getClickHistory(shortCode, 0, 1000);
+      const csv = this.convertToCSV(history);
+      return csv;
     } catch (error) {
-      console.error('Error fetching recent clicks:', error);
+      console.error('Error exporting analytics:', error);
       throw error;
     }
   }
 
   /**
-   * Get click trends (hourly, daily, etc.)
+   * Convert click history to CSV format
    */
-  async getClickTrends(shortCode: string, period: 'hourly' | 'daily' | 'weekly') {
-    try {
-      const response = await this.api.get(`/analytics/${shortCode}/trends`, {
-        params: { period },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching click trends:', error);
-      throw error;
-    }
+  private convertToCSV(data: any): string {
+    const headers = ['Timestamp', 'IP Address'];
+    const rows = data.content?.map((click: any) => [
+      click.clickedAt || '',
+      click.ipAddress || '',
+    ]) || [];
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row: any[]) => row.join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
+
+  /**
+   * Helper method for retry logic
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 

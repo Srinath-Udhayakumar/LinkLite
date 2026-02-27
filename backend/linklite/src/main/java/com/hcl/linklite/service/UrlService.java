@@ -1,21 +1,22 @@
 package com.hcl.linklite.service;
 
-import com.hcl.linklite.dto.UrlShortenResponse;
-import com.hcl.linklite.entity.Url;
-import com.hcl.linklite.entity.UrlClick;
-import com.hcl.linklite.exception.ShortCodeGenerationException;
-import com.hcl.linklite.exception.UrlNotFoundException;
-import com.hcl.linklite.repository.UrlRepository;
-import com.hcl.linklite.repository.UrlClickRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hcl.linklite.dto.UrlShortenResponse;
+import com.hcl.linklite.entity.Url;
+import com.hcl.linklite.entity.UrlClick;
+import com.hcl.linklite.exception.UrlNotFoundException;
+import com.hcl.linklite.repository.UrlClickRepository;
+import com.hcl.linklite.repository.UrlRepository;
+
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -104,6 +105,11 @@ public class UrlService {
         return clicks.size() > limit ? clicks.subList(0, limit) : clicks;
     }
     
+    @Transactional(readOnly = true)
+    public List<Url> getUserStats() {
+        return urlRepository.findTop10ByOrderByTotalClicksDesc();
+    }
+    
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
@@ -116,5 +122,16 @@ public class UrlService {
         }
         
         return request.getRemoteAddr();
+    }
+    
+    private String anonymizeIp(String ipAddress) {
+        if (ipAddress == null || !ipAddress.matches(".*\\..*")) {
+            return ipAddress;
+        }
+        String[] parts = ipAddress.split("\\.");
+        if (parts.length == 4) {
+            return parts[0] + "." + parts[1] + "." + parts[2] + ".0";
+        }
+        return ipAddress;
     }
 }

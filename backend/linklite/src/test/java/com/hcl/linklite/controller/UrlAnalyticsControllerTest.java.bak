@@ -1,0 +1,116 @@
+package com.hcl.linklite.controller;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.hcl.linklite.dto.AnalyticsResponse;
+import com.hcl.linklite.dto.ClickCountResponseDto;
+import com.hcl.linklite.service.UrlAnalyticsService;
+
+@WebMvcTest(UrlAnalyticsController.class)
+class UrlAnalyticsControllerTest {
+    
+    @Autowired
+    private MockMvc mockMvc;
+    
+    @MockBean
+    private UrlAnalyticsService analyticsService;
+    
+    @Test
+    @DisplayName("Should get total analytics")
+    void shouldGetTotalAnalytics() throws Exception {
+        String shortCode = "abc123";
+        
+        AnalyticsResponse response = AnalyticsResponse.builder()
+                .shortCode(shortCode)
+                .longUrl("https://example.com")
+                .totalClicks(100L)
+                .createdAt(LocalDateTime.now().minusDays(10))
+                .recentClicks(List.of())
+                .build();
+        
+        when(analyticsService.getTotalAnalytics(shortCode)).thenReturn(response);
+        
+        mockMvc.perform(get("/urls/{shortCode}/analytics", shortCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shortCode").value(shortCode))
+                .andExpect(jsonPath("$.longUrl").value("https://example.com"))
+                .andExpect(jsonPath("$.totalClicks").value(100L));
+        
+        verify(analyticsService).getTotalAnalytics(shortCode);
+    }
+    
+    @Test
+    @DisplayName("Should get 24 hour analytics")
+    void shouldGet24HourAnalytics() throws Exception {
+        String shortCode = "abc123";
+        
+        ClickCountResponseDto response = new ClickCountResponseDto(shortCode, "24h", 42L);
+        
+        when(analyticsService.getLast24HoursClicks(shortCode)).thenReturn(response);
+        
+        mockMvc.perform(get("/urls/{shortCode}/analytics", shortCode)
+                .param("range", "24h"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shortCode").value(shortCode))
+                .andExpect(jsonPath("$.range").value("24h"))
+                .andExpect(jsonPath("$.clickCount").value(42L));
+        
+        verify(analyticsService).getLast24HoursClicks(shortCode);
+    }
+    
+    @Test
+    @DisplayName("Should get click history with pagination")
+    void shouldGetClickHistoryWithPagination() throws Exception {
+        String shortCode = "abc123";
+        
+        Page<?> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        
+        when(analyticsService.getClickHistory(eq(shortCode), anyInt(), anyInt()))
+                .thenReturn((Page) emptyPage);
+        
+        mockMvc.perform(get("/urls/{shortCode}/analytics/history", shortCode)
+                .param("page", "0")
+                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(10));
+        
+        verify(analyticsService).getClickHistory(shortCode, 0, 10);
+    }
+    
+    @Test
+    @DisplayName("Should use default pagination parameters")
+    void shouldUseDefaultPaginationParameters() throws Exception {
+        String shortCode = "abc123";
+        
+        Page<?> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        
+        when(analyticsService.getClickHistory(eq(shortCode), anyInt(), anyInt()))
+                .thenReturn((Page) emptyPage);
+        
+        mockMvc.perform(get("/urls/{shortCode}/analytics/history", shortCode))
+                .andExpect(status().isOk());
+        
+        verify(analyticsService).getClickHistory(shortCode, 0, 10);
+    }
+}
