@@ -2,19 +2,39 @@ package com.hcl.linklite.repository;
 
 import com.hcl.linklite.entity.UrlClick;
 import com.hcl.linklite.entity.Url;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.time.LocalDateTime;
-import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public interface UrlClickRepository extends JpaRepository<UrlClick, Long> {
 
-    long countByUrl(Url url);
+    // Total clicks for a shortCode
+    long countByUrl_ShortCode(String shortCode);
 
-    long countByUrlAndClickedAtAfter(Url url, LocalDateTime time);
+    // Clicks within time range (e.g., last 24 hours)
+    @Query("""
+        SELECT COUNT(c)
+        FROM UrlClick c
+        WHERE c.url.shortCode = :shortCode
+        AND c.clickedAt >= :fromTime
+    """)
+    long countClicksInRange(@Param("shortCode") String shortCode,
+                            @Param("fromTime") LocalDateTime fromTime);
+
+    // Paginated click history
+    Page<UrlClick> findByUrl_ShortCodeOrderByClickedAtDesc(
+            String shortCode,
+            Pageable pageable
+    );
+    
+    // Additional methods from develop branch
+    List<UrlClick> findByUrlAndClickedAtAfter(Url url, LocalDateTime time);
 
     @Query("SELECT uc FROM UrlClick uc WHERE uc.url = :url ORDER BY uc.clickedAt DESC")
-    List<UrlClick> findRecentClicksByUrl(@Param("url") Url url, @Param("limit") int limit);
+    List<UrlClick> findRecentClicksByUrl(@Param("url") Url url);
 }

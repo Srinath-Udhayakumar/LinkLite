@@ -1,10 +1,12 @@
 package com.hcl.linklite.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
-import java.util.Objects;
 import org.hibernate.Hibernate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "url_clicks",
@@ -29,6 +31,7 @@ public class UrlClick {
     @Column(name = "clicked_at", nullable = false)
     private LocalDateTime clickedAt;
 
+    @Size(max = 45, message = "IP address must not exceed 45 characters")
     @Column(name = "ip_address")
     private String ipAddress;
 
