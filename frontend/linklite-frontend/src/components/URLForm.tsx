@@ -41,11 +41,11 @@ export const URLForm: React.FC = () => {
 
     try {
       const response: CreateURLResponse = await apiService.shortenURL({
-        long_url: longURL,
+        longUrl: longURL,
       });
 
-      setShortCode(response.short_code);
-      setShortenedURL(response.shortened_url);
+      setShortCode(response.shortCode);
+      setShortenedURL(response.shortUrl);
       setSuccess(true);
       setLongURL('');
 

@@ -27,12 +27,12 @@ export interface AnalyticsData {
 }
 
 export interface CreateURLRequest {
-  long_url: string;
+  longUrl: string;
 }
 
 export interface CreateURLResponse {
-  id: number;
-  long_url: string;
-  short_code: string;
-  shortened_url: string;
+  shortCode: string;
+  shortUrl: string;
+  longUrl: string;
+  createdAt: string;
 }
