@@ -6,7 +6,7 @@ A modern, responsive React frontend for a URL shortening service with real-time 
 
 - **URL Shortening**: Convert long URLs to short, shareable links
 - **Real-time Analytics**: View click counts and engagement metrics
-- **Detailed Analytics**: Timeline charts, hourly trends, and recent click history
+- **Detailed Analytics**: Timeline charts, hourly trends, and recent click history.
 - **Search & Filter**: Find URLs quickly with search and sorting options
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
 - **Modern UI**: Built with Tailwind CSS for a professional appearance
